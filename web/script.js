@@ -1,8 +1,42 @@
-// ------------------ LOGIN FUNCTION ------------------
+/* =========================================================================
+   STULEAVE - Improved script.js
+   Cleaner, safer, modular, no global onload overrides.
+   Plays nicely with student_home.html, faculty_home.html, admin_home.html
+   ========================================================================= */
+
+/* ----------------------- Small utilities ----------------------- */
+const STORAGE = {
+  students: "students",
+  faculty: "faculty",
+  requests: "leaveRequests",
+  loggedStudent: "loggedInStudent",
+  loggedFaculty: "loggedInFaculty",
+};
+
+const q = selector => document.querySelector(selector);
+const qa = selector => Array.from(document.querySelectorAll(selector));
+
+const nowString = () => new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" });
+
+const save = (key, value) => localStorage.setItem(key, JSON.stringify(value));
+const load = key => JSON.parse(localStorage.getItem(key) || "[]");
+
+const uid = () => Date.now().toString(36) + Math.floor(Math.random() * 1000).toString(36);
+
+/* ----------------------- Notifications ----------------------- */
+function showStatusMessage(msg, el = "#statusMsg", timeout = 3000) {
+  const node = document.querySelector(el);
+  if (!node) return;
+  node.textContent = msg;
+  node.style.opacity = 1;
+  setTimeout(() => node.style.opacity = 0, timeout);
+}
+
+/* ----------------------- LOGIN ----------------------- */
 function login() {
-  const userType = document.getElementById("userType").value;
-  const username = document.getElementById("username").value.trim();
-  const password = document.getElementById("password").value.trim();
+  const userType = q("#userType")?.value;
+  const username = q("#username")?.value.trim();
+  const password = q("#password")?.value.trim();
 
   if (!userType || !username || !password) {
     alert("⚠️ Please fill all fields.");
@@ -10,27 +44,27 @@ function login() {
   }
 
   if (userType === "student") {
-    const students = JSON.parse(localStorage.getItem("students") || "[]");
+    const students = load(STORAGE.students);
     const match = students.find(s => s.id === username && s.pass === password);
-
     if (match) {
-      localStorage.setItem("loggedInStudent", JSON.stringify(match));
+      localStorage.setItem(STORAGE.loggedStudent, JSON.stringify(match));
       window.location.href = "student_home.html";
     } else {
       alert("❌ Invalid Student ID or Password!");
     }
+    return;
   }
 
   if (userType === "faculty") {
-    const faculty = JSON.parse(localStorage.getItem("faculty") || "[]");
+    const faculty = load(STORAGE.faculty);
     const match = faculty.find(f => f.id === username && f.pass === password);
-
     if (match) {
-      localStorage.setItem("loggedInFaculty", JSON.stringify(match));
+      localStorage.setItem(STORAGE.loggedFaculty, JSON.stringify(match));
       window.location.href = "faculty_home.html";
     } else {
       alert("❌ Invalid Faculty ID or Password!");
     }
+    return;
   }
 
   if (userType === "admin") {
@@ -42,24 +76,22 @@ function login() {
   }
 }
 
-// ------------------ STUDENT FUNCTIONS ------------------
+/* ----------------------- STUDENT ----------------------- */
 function applyLeave() {
-  const reason = document.getElementById("reason").value;
-  const days = document.getElementById("days").value;
-  const startDate = document.getElementById("startDate").value;
-  const endDate = document.getElementById("endDate").value;
-  const facultySelect = document.getElementById("facultySelect");
-  const assignedFaculty = facultySelect ? facultySelect.value : "";
+  const reason = q("#reason")?.value?.trim();
+  const days = q("#days")?.value?.trim();
+  const startDate = q("#startDate")?.value;
+  const endDate = q("#endDate")?.value;
+  const assignedFaculty = q("#facultySelect")?.value;
 
   if (!reason || !days || !startDate || !endDate || !assignedFaculty) {
     alert("⚠️ Please fill all fields (including faculty)!");
     return;
   }
 
-  const student = JSON.parse(localStorage.getItem("loggedInStudent"));
-
+  const student = JSON.parse(localStorage.getItem(STORAGE.loggedStudent) || "null");
   const leaveRequest = {
-    id: Date.now(), // ✅ unique ID
+    id: uid(),
     user: student ? student.id : "Unknown",
     reason,
     days,
@@ -67,206 +99,298 @@ function applyLeave() {
     endDate,
     status: "Pending",
     assignedFaculty,
-    time: new Date().toLocaleString("en-IN", { timeZone: "Asia/Kolkata" })
+    time: nowString()
   };
 
-  let requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
+  const requests = load(STORAGE.requests);
   requests.push(leaveRequest);
-  localStorage.setItem("leaveRequests", JSON.stringify(requests));
+  save(STORAGE.requests, requests);
 
-  document.getElementById("statusMsg").textContent = "✅ Leave request submitted!";
+  showStatusMessage("✅ Leave request submitted!", "#statusMsg", 2500);
   loadStudentLeaves();
 }
 
+/* Renders the student's own leave rows */
 function loadStudentLeaves() {
-  const table = document.getElementById("studentLeaveTable");
+  const table = q("#studentLeaveTable");
   if (!table) return;
 
-  table.innerHTML = "";
-  const student = JSON.parse(localStorage.getItem("loggedInStudent"));
-  const requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
+  const student = JSON.parse(localStorage.getItem(STORAGE.loggedStudent) || "null");
+  if (!student) {
+    table.innerHTML = `<tr><td colspan="7">Please login as a student to view leaves.</td></tr>`;
+    return;
+  }
 
-  requests
+  const requests = load(STORAGE.requests)
     .filter(r => r.user === student.id)
-    .forEach(r => {
-      const row = `<tr>
-        <td>${r.reason}</td>
-        <td>${r.days}</td>
-        <td>${r.startDate}</td>
-        <td>${r.endDate}</td>
-        <td>${r.assignedFaculty}</td>
-        <td>${r.status}</td>
-        <td><button onclick="deleteStudentLeave(${r.id})">🗑 Delete</button></td>
-      </tr>`;
-      table.innerHTML += row;
-    });
+    .sort((a, b) => b.id.localeCompare(a.id)); // newest first
+
+  if (requests.length === 0) {
+    table.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--muted)">No leave requests yet.</td></tr>`;
+    return;
+  }
+
+  table.innerHTML = requests.map(r => `
+    <tr>
+      <td>${escapeHtml(r.reason)}</td>
+      <td>${escapeHtml(r.days)}</td>
+      <td>${escapeHtml(r.startDate)}</td>
+      <td>${escapeHtml(r.endDate)}</td>
+      <td>${escapeHtml(r.assignedFaculty)}</td>
+      <td><span class="badge ${r.status.toLowerCase()}">${escapeHtml(r.status)}</span></td>
+      <td><button class="btn btn-danger" onclick="deleteStudentLeave('${r.id}')">🗑 Delete</button></td>
+    </tr>
+  `).join("");
 }
 
+/* Delete student leave (only their own) */
 function deleteStudentLeave(requestId) {
-  let requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
-  const student = JSON.parse(localStorage.getItem("loggedInStudent"));
+  if (!confirm("Delete this leave request?")) return;
+  let requests = load(STORAGE.requests);
+  const student = JSON.parse(localStorage.getItem(STORAGE.loggedStudent) || "null");
   requests = requests.filter(r => !(r.id === requestId && r.user === student.id));
-  localStorage.setItem("leaveRequests", JSON.stringify(requests));
+  save(STORAGE.requests, requests);
   loadStudentLeaves();
 }
 
-// ------------------ FACULTY FUNCTIONS ------------------
+/* ----------------------- FACULTY ----------------------- */
 function loadFacultyRequests() {
-  const table = document.getElementById("facultyLeaveTable");
+  const table = q("#facultyLeaveTable");
   if (!table) return;
 
-  table.innerHTML = "";
-  const faculty = JSON.parse(localStorage.getItem("loggedInFaculty"));
-  const requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
+  const faculty = JSON.parse(localStorage.getItem(STORAGE.loggedFaculty) || "null");
+  if (!faculty) {
+    table.innerHTML = `<tr><td colspan="8">Please login as faculty to view requests.</td></tr>`;
+    return;
+  }
 
-  requests
-    .filter(r => r.assignedFaculty === faculty.id) // ✅ only this faculty’s requests
-    .forEach(r => {
-      const row = `<tr>
-        <td>${r.user}</td>
-        <td>${r.reason}</td>
-        <td>${r.days}</td>
-        <td>${r.startDate}</td>
-        <td>${r.endDate}</td>
-        <td>${r.time}</td>
-        <td>
-          <select id="status-${r.id}">
-            <option value="Pending" ${r.status === "Pending" ? "selected" : ""}>Pending</option>
-            <option value="Approved" ${r.status === "Approved" ? "selected" : ""}>Approved</option>
-            <option value="Rejected" ${r.status === "Rejected" ? "selected" : ""}>Rejected</option>
-          </select>
-        </td>
-      </tr>`;
-      table.innerHTML += row;
-    });
+  const requests = load(STORAGE.requests)
+    .filter(r => r.assignedFaculty === faculty.id)
+    .sort((a, b) => b.id.localeCompare(a.id));
+
+  if (requests.length === 0) {
+    table.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--muted)">No requests assigned to you.</td></tr>`;
+    return;
+  }
+
+  // Build rows with select controls unique per request
+  table.innerHTML = requests.map(r => `
+    <tr>
+      <td>${escapeHtml(r.user)}</td>
+      <td>${escapeHtml(r.reason)}</td>
+      <td>${escapeHtml(r.days)}</td>
+      <td>${escapeHtml(r.startDate)}</td>
+      <td>${escapeHtml(r.endDate)}</td>
+      <td>${escapeHtml(r.time)}</td>
+      <td>
+        <select data-reqid="${r.id}" class="status-select">
+          <option value="Pending" ${r.status === "Pending" ? "selected" : ""}>Pending</option>
+          <option value="Approved" ${r.status === "Approved" ? "selected" : ""}>Approved</option>
+          <option value="Rejected" ${r.status === "Rejected" ? "selected" : ""}>Rejected</option>
+        </select>
+      </td>
+    </tr>
+  `).join("");
 }
 
+/* Save faculty decisions by reading select elements */
 function submitFacultyDecisions() {
-  const faculty = JSON.parse(localStorage.getItem("loggedInFaculty"));
-  let requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
+  const faculty = JSON.parse(localStorage.getItem(STORAGE.loggedFaculty) || "null");
+  if (!faculty) { alert("Please login as faculty."); return; }
 
-  requests = requests.map(r => {
-    if (r.assignedFaculty === faculty.id) {
-      const statusSelect = document.getElementById(`status-${r.id}`);
-      if (statusSelect) {
-        r.status = statusSelect.value;
-      }
+  const selects = qa("select.status-select");
+  if (selects.length === 0) { alert("No decisions to save."); return; }
+
+  let requests = load(STORAGE.requests);
+  let changed = 0;
+
+  selects.forEach(sel => {
+    const id = sel.dataset.reqid;
+    const newStatus = sel.value;
+    const idx = requests.findIndex(r => r.id === id && r.assignedFaculty === faculty.id);
+    if (idx !== -1 && requests[idx].status !== newStatus) {
+      requests[idx].status = newStatus;
+      changed++;
     }
-    return r;
   });
 
-  localStorage.setItem("leaveRequests", JSON.stringify(requests));
-  alert("✅ Leave statuses updated!");
+  if (changed === 0) {
+    alert("No changes detected.");
+    return;
+  }
+
+  save(STORAGE.requests, requests);
+  alert(`✅ ${changed} decision(s) saved.`);
   loadFacultyRequests();
 }
 
-// ------------------ ADMIN FUNCTIONS ------------------
+/* ----------------------- ADMIN (students & faculty) ----------------------- */
 function addStudent() {
-  const id = document.getElementById("studentId").value.trim();
-  const pass = document.getElementById("studentPass").value.trim();
-  const mobile = document.getElementById("studentMobile").value.trim();
+  const id = q("#studentId")?.value?.trim();
+  const pass = q("#studentPass")?.value?.trim();
+  const mobile = q("#studentMobile")?.value?.trim();
 
   if (!id || !pass || !mobile) {
     alert("⚠️ Fill all student fields!");
     return;
   }
 
-  let students = JSON.parse(localStorage.getItem("students")) || [];
+  let students = load(STORAGE.students);
+  if (students.some(s => s.id === id)) {
+    alert("Student ID already exists.");
+    return;
+  }
+
   students.push({ id, pass, mobile });
-  localStorage.setItem("students", JSON.stringify(students));
+  save(STORAGE.students, students);
 
-  document.getElementById("studentId").value = "";
-  document.getElementById("studentPass").value = "";
-  document.getElementById("studentMobile").value = "";
+  q("#studentId").value = "";
+  q("#studentPass").value = "";
+  q("#studentMobile").value = "";
 
-  loadStudents();
+  renderStudents();
+  // update faculty select on student page if present
+  if (typeof loadFacultyForStudents === "function") loadFacultyForStudents();
+  showStatusMessage("✅ Student added.", "#statusMsg", 2000);
 }
 
-function loadStudents() {
-  const list = document.getElementById("studentList");
+function renderStudents() {
+  const list = q("#studentList");
   if (!list) return;
-
-  list.innerHTML = "";
-  const students = JSON.parse(localStorage.getItem("students")) || [];
-
-  students.forEach((s, i) => {
-    const row = `<li>${s.id} - ${s.mobile} 
-      <button onclick="deleteStudent(${i})">🗑 Delete</button></li>`;
-    list.innerHTML += row;
-  });
+  const students = load(STORAGE.students);
+  if (students.length === 0) {
+    list.innerHTML = `<li style="color:var(--muted)">No students added yet.</li>`;
+    return;
+  }
+  list.innerHTML = students.map((s, i) => `
+    <li>
+      <strong>${escapeHtml(s.id)}</strong> — ${escapeHtml(s.mobile)}
+      <button class="btn btn-danger" onclick="deleteStudent(${i})">🗑 Delete</button>
+    </li>
+  `).join("");
 }
 
 function deleteStudent(index) {
-  let students = JSON.parse(localStorage.getItem("students")) || [];
+  if (!confirm("Delete this student?")) return;
+  let students = load(STORAGE.students);
   students.splice(index, 1);
-  localStorage.setItem("students", JSON.stringify(students));
-  loadStudents();
+  save(STORAGE.students, students);
+  renderStudents();
+  if (typeof loadFacultyForStudents === "function") loadFacultyForStudents();
 }
 
 function addFaculty() {
-  const id = document.getElementById("facultyId").value.trim();
-  const pass = document.getElementById("facultyPass").value.trim();
+  const id = q("#facultyId")?.value?.trim();
+  const pass = q("#facultyPass")?.value?.trim();
 
   if (!id || !pass) {
     alert("⚠️ Fill all faculty fields!");
     return;
   }
 
-  let faculty = JSON.parse(localStorage.getItem("faculty")) || [];
+  let faculty = load(STORAGE.faculty);
+  if (faculty.some(f => f.id === id)) {
+    alert("Faculty ID already exists.");
+    return;
+  }
+
   faculty.push({ id, pass });
-  localStorage.setItem("faculty", JSON.stringify(faculty));
+  save(STORAGE.faculty, faculty);
 
-  document.getElementById("facultyId").value = "";
-  document.getElementById("facultyPass").value = "";
+  q("#facultyId").value = "";
+  q("#facultyPass").value = "";
 
-  loadFaculty();
+  renderFaculty();
+  if (typeof loadFacultyForStudents === "function") loadFacultyForStudents();
+  showStatusMessage("✅ Faculty added.", "#statusMsg", 2000);
 }
 
-function loadFaculty() {
-  const list = document.getElementById("facultyList");
+function renderFaculty() {
+  const list = q("#facultyList");
   if (!list) return;
-
-  list.innerHTML = "";
-  const faculty = JSON.parse(localStorage.getItem("faculty")) || [];
-
-  faculty.forEach((f, i) => {
-    const row = `<li>${f.id} 
-      <button onclick="deleteFaculty(${i})">🗑 Delete</button></li>`;
-    list.innerHTML += row;
-  });
+  const faculty = load(STORAGE.faculty);
+  if (faculty.length === 0) {
+    list.innerHTML = `<li style="color:var(--muted)">No faculty added yet.</li>`;
+    return;
+  }
+  list.innerHTML = faculty.map((f, i) => `
+    <li>
+      <strong>${escapeHtml(f.id)}</strong>
+      <button class="btn btn-danger" onclick="deleteFaculty(${i})">🗑 Delete</button>
+    </li>
+  `).join("");
 }
 
 function deleteFaculty(index) {
-  let faculty = JSON.parse(localStorage.getItem("faculty")) || [];
+  if (!confirm("Delete this faculty?")) return;
+  let faculty = load(STORAGE.faculty);
   faculty.splice(index, 1);
-  localStorage.setItem("faculty", JSON.stringify(faculty));
-  loadFaculty();
+  save(STORAGE.faculty, faculty);
+  renderFaculty();
+  if (typeof loadFacultyForStudents === "function") loadFacultyForStudents();
 }
 
+/* populate faculty select used in student form */
 function loadFacultyForStudents() {
-  const facultySelect = document.getElementById("facultySelect");
+  const facultySelect = q("#facultySelect");
   if (!facultySelect) return;
-
   facultySelect.innerHTML = "";
-  const faculty = JSON.parse(localStorage.getItem("faculty")) || [];
-
+  const faculty = load(STORAGE.faculty);
   faculty.forEach(f => {
-    const option = document.createElement("option");
-    option.value = f.id;
-    option.textContent = f.id;
-    facultySelect.appendChild(option);
+    const opt = document.createElement("option");
+    opt.value = f.id;
+    opt.textContent = f.id;
+    facultySelect.appendChild(opt);
   });
 }
 
-// ------------------ AUTO LOAD ------------------
-if (window.location.pathname.includes("student_home.html")) {
-  window.onload = function () {
+/* ----------------------- Helpers ----------------------- */
+/* escape simple HTML to avoid injection in table strings */
+function escapeHtml(str) {
+  if (str === null || str === undefined) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+/* ----------------------- Boot / Auto-load ----------------------- */
+function setupPage() {
+  const path = window.location.pathname;
+
+  if (path.includes("index.html") || path.endsWith("/")) {
+    // nothing heavy: keep login handler available
+    const loginBtn = q('button[onclick="login()"]') || q(".btn.btn-primary");
+    if (loginBtn) loginBtn.addEventListener("click", login);
+  }
+
+  if (path.includes("student_home.html")) {
     loadFacultyForStudents();
     loadStudentLeaves();
-  };
-}
-if (window.location.pathname.includes("faculty_home.html")) {
-  window.onload = function () {
+    // make sure the apply button is wired
+    const applyBtn = q('button[onclick="applyLeave()"]');
+    if (applyBtn) applyBtn.addEventListener("click", applyLeave);
+  }
+
+  if (path.includes("faculty_home.html")) {
     loadFacultyRequests();
-  };
+    // wire submit button
+    const submitBtn = q('button[onclick="submitFacultyDecisions()"]') || q(".btn.btn-primary");
+    if (submitBtn) submitBtn.addEventListener("click", submitFacultyDecisions);
+  }
+
+  if (path.includes("admin_home.html")) {
+    renderStudents();
+    renderFaculty();
+    // wire admin buttons if present
+    const addSBtn = q('button[onclick="addStudent()"]');
+    if (addSBtn) addSBtn.addEventListener("click", addStudent);
+    const addFBtn = q('button[onclick="addFaculty()"]');
+    if (addFBtn) addFBtn.addEventListener("click", addFaculty);
+  }
 }
+
+/* run on DOM ready */
+document.addEventListener("DOMContentLoaded", setupPage);

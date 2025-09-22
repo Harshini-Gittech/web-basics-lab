@@ -1,99 +1,159 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Faculty Portal</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-    h1, h2 {
-      text-align: center;
-    }
-    .faculty-box {
-      margin: 20px auto;
-      width: 90%;
-      max-width: 900px;
-      background: rgba(255,255,255,0.9);
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
-    }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-    th {
-      background-color: #f4f4f4;
-    }
-    select {
-      padding: 5px;
-    }
-    button {
-      margin-top: 15px;
-      padding: 10px 20px;
-      border-radius: 5px;
-      cursor: pointer;
-      border: none;
-      background: #007bff;
-      color: white;
-    }
-    .Pending { background-color: #f3eb11; }
-    .Approved { background-color: #16ee07; }
-    .Rejected { background-color: #f20c0c; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
   <script src="script.js" defer></script>
 </head>
-<body>
-  <header>
-    <h1>Faculty Portal</h1>
-  </header>
+<body class="login-bg">   <!-- ✅ background photo applied -->
 
-  <main>
-    <div class="faculty-box">
-      <h2><b>Welcome</b> <span id="facultyName">Faculty</span></h2>
+  <!-- Transparent header -->
+  <header><h1>Faculty Portal</h1></header>
 
-      <h3>Student Leave Requests</h3>
-      <table>
-        <thead>
-          <tr>
-            <th>Student</th>
-            <th>Reason</th>
-            <th>Days</th>
-            <th>From</th>
-            <th>To</th>
-            <th>Applied At</th>
-            <th>Decision</th>
-          </tr>
-        </thead>
-        <tbody id="facultyLeaveTable"></tbody>
-      </table>
-
-      <button onclick="submitFacultyDecisions()">💾 Save Decisions</button>
+  <div class="container">
+    <!-- Faculty Info -->
+    <div class="card">
+      <h2>Welcome</h2>
+      <p id="facultyName">Faculty Name</p>
     </div>
-  </main>
 
+    <!-- Pending Requests -->
+    <div class="card mt-16">
+      <h2>Student Leave Requests</h2>
+      <form id="facultyForm">
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Select</th>
+                <th>Student</th>
+                <th>Reason</th>
+                <th>Days</th>
+                <th>From</th>
+                <th>To</th>
+                <th>Applied At</th>
+                <th>Decision</th>
+              </tr>
+            </thead>
+            <tbody id="requestsTable"></tbody>
+          </table>
+        </div>
+        <div class="mt-12">
+          <button type="submit" class="btn btn-primary">Save Decisions</button>
+          <button type="button" id="deleteFaculty" class="btn btn-danger">Delete Selected</button>
+        </div>
+      </form>
+    </div>
+
+    <!-- Status Overview -->
+    <div class="card mt-16">
+      <h2>Leave Status</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Student</th>
+              <th>Reason</th>
+              <th>Days</th>
+              <th>From</th>
+              <th>To</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="statusTable"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ✅ Script to load faculty data -->
   <script>
-    // Show logged-in faculty name
+    // Load logged-in faculty name
     const faculty = JSON.parse(localStorage.getItem("loggedInFaculty"));
-    if(faculty) document.getElementById("facultyName").textContent = faculty.id;
+    if (faculty) {
+      document.getElementById("facultyName").textContent = faculty.id;
+    }
 
-    // Load requests on page load
-    window.onload = function(){
-      loadFacultyRequests();
-    };
+    let requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
+    const tableBody = document.getElementById("requestsTable");
+    const statusTable = document.getElementById("statusTable");
+
+    function loadRequests() {
+      tableBody.innerHTML = "";
+      if (requests.length === 0) {
+        tableBody.innerHTML = `<tr><td colspan="8">No leave requests yet.</td></tr>`;
+      } else {
+        requests.forEach((req, index) => {
+          const row = document.createElement("tr");
+          row.innerHTML = `
+            <td><input type="checkbox" data-index="${index}"></td>
+            <td>${req.user}</td>
+            <td>${req.reason}</td>
+            <td>${req.days}</td>
+            <td>${req.startDate}</td>
+            <td>${req.endDate}</td>
+            <td>${req.time}</td>
+            <td>
+              <select data-index="${index}">
+                <option value="Pending" ${req.status==="Pending"?"selected":""}>Pending</option>
+                <option value="Approved" ${req.status==="Approved"?"selected":""}>Approved</option>
+                <option value="Rejected" ${req.status==="Rejected"?"selected":""}>Rejected</option>
+              </select>
+            </td>
+          `;
+          tableBody.appendChild(row);
+        });
+      }
+    }
+
+    // Save decisions
+    document.getElementById("facultyForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      const selects = document.querySelectorAll("select[data-index]");
+      selects.forEach(sel => {
+        const idx = sel.getAttribute("data-index");
+        requests[idx].status = sel.value;
+      });
+      localStorage.setItem("leaveRequests", JSON.stringify(requests));
+      loadStatusTable();
+      alert("Decisions saved ✅");
+    });
+
+    // Delete selected requests
+    document.getElementById("deleteFaculty").addEventListener("click", function() {
+      const checkboxes = document.querySelectorAll("#requestsTable input[type='checkbox']:checked");
+      if (checkboxes.length === 0) {
+        alert("Please select at least one request to delete.");
+        return;
+      }
+      const indices = Array.from(checkboxes).map(cb => parseInt(cb.dataset.index));
+      requests = requests.filter((_, i) => !indices.includes(i));
+      localStorage.setItem("leaveRequests", JSON.stringify(requests));
+      loadRequests();
+      loadStatusTable();
+      alert("Selected requests deleted ✅");
+    });
+
+    function loadStatusTable() {
+      statusTable.innerHTML = "";
+      requests.forEach(req => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${req.user}</td>
+          <td>${req.reason}</td>
+          <td>${req.days}</td>
+          <td>${req.startDate}</td>
+          <td>${req.endDate}</td>
+          <td><span class="badge ${req.status.toLowerCase()}">${req.status}</span></td>
+        `;
+        statusTable.appendChild(row);
+      });
+    }
+
+    loadRequests();
+    loadStatusTable();
   </script>
 </body>
 </html>

@@ -1,159 +1,80 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Student Portal - Leave Management</title>
-  <link rel="stylesheet" href="style.css">
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 20px;
-      background-size: cover;
-      background-repeat: no-repeat;
-      background-position: center;
-    }
-
-    h1, h2 {
-      text-align: center;
-    }
-
-    .leave-form, .leave-history {
-      margin: 20px auto;
-      width: 90%;
-      max-width: 800px;
-      background: rgba(255,255,255,0.9);
-      padding: 20px;
-      border-radius: 8px;
-      box-shadow: 0px 0px 10px rgba(0,0,0,0.2);
-    }
-
-    input, select, button {
-      display: block;
-      width: 95%;
-      margin: 10px 0;
-      padding: 8px;
-      font-size: 1em;
-    }
-
-    button {
-      width: auto;
-      cursor: pointer;
-      border: none;
-      border-radius: 5px;
-    }
-
-    button.submit-btn { background: #007bff; color: white; }
-    button.delete-btn { background: red; color: white; }
-
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      margin-top: 10px;
-    }
-
-    th, td {
-      border: 1px solid #ccc;
-      padding: 8px;
-      text-align: center;
-    }
-
-    th {
-      background-color: #f4f4f4;
-    }
-
-    /* Status colors */
-    .Pending { color: #f3b809; background-color: #fff3cd; font-weight: bold; }
-    .Approved { color: #0bef40; background-color: #c8f7c5; font-weight: bold; }
-    .Rejected { color: #e7081f; background-color: #f7c5c5; font-weight: bold; }
-  </style>
+  <link rel="stylesheet" href="style.css" />
   <script src="script.js" defer></script>
 </head>
-<body>
-  <h1>🎓 Student Leave Portal</h1>
+<body class="login-bg">
+  <!-- Transparent header -->
+  <header><h1>Student Portal</h1></header>
 
-  <div class="leave-form">
-    <h2>Apply for Leave</h2>
-    <form id="leaveForm">
-      <label for="reason">Reason for Leave:</label>
-      <input type="text" id="reason" placeholder="Enter reason" required>
+  <div class="container">
+    <div class="card">
+      <h2>Apply for Leave</h2>
 
-      <label for="facultySelect">Select Faculty:</label>
-      <select id="facultySelect" required></select>
+      <div class="form-grid full">
+        <label>
+          Reason
+          <input type="text" id="reason" placeholder="Enter reason" />
+        </label>
 
-      <label for="days">Number of Days:</label>
-      <input type="number" id="days" min="1" required>
+        <label>
+          Faculty
+          <select id="facultySelect"></select>
+        </label>
 
-      <label for="startDate">Start Date:</label>
-      <input type="date" id="startDate" required>
+        <label>
+          Days
+          <input type="number" id="days" min="1" />
+        </label>
 
-      <label for="endDate">End Date:</label>
-      <input type="date" id="endDate" required>
+        <label>
+          Start Date
+          <input type="date" id="startDate" />
+        </label>
 
-      <button type="submit" class="submit-btn">📩 Submit Leave Request</button>
-    </form>
-    <p id="statusMsg"></p>
-  </div>
+        <label>
+          End Date
+          <input type="date" id="endDate" />
+        </label>
+      </div>
 
-  <div class="leave-history">
-    <h2>📜 Your Leave History</h2>
-    <table>
-      <thead>
-        <tr>
-          <th>Reason</th>
-          <th>Days</th>
-          <th>Start Date</th>
-          <th>End Date</th>
-          <th>Faculty</th>
-          <th>Status</th>
-          <th>Action</th>
-        </tr>
-      </thead>
-      <tbody id="studentLeaveTable"></tbody>
-    </table>
+      <div class="mt-12">
+        <button class="btn btn-primary" onclick="applyLeave()">📩 Submit Leave Request</button>
+        <span id="statusMsg" style="margin-left:12px; font-weight:600;"></span>
+      </div>
+    </div>
+
+    <div class="card mt-16">
+      <h2>Your Leave History</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Reason</th>
+              <th>Days</th>
+              <th>Start</th>
+              <th>End</th>
+              <th>Faculty</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="studentLeaveTable"></tbody>
+        </table>
+      </div>
+    </div>
   </div>
 
   <script>
-    // Handle form submission
-    const leaveForm = document.getElementById("leaveForm");
-    leaveForm.addEventListener("submit", function(e){
-      e.preventDefault();
-      applyLeave();
-      leaveForm.reset(); // clear inputs after submission
+    // Ensure the page loads faculty list and existing leaves when opened
+    window.addEventListener('DOMContentLoaded', function() {
+      if (typeof loadFacultyForStudents === 'function') loadFacultyForStudents();
+      if (typeof loadStudentLeaves === 'function') loadStudentLeaves();
     });
-
-    // Load leaves and faculty dropdown
-    window.onload = function(){
-      loadFacultyForStudents();
-      loadStudentLeaves();
-    };
-
-    // Overwrite loadStudentLeaves to add class for status colors
-    function loadStudentLeaves() {
-      const table = document.getElementById("studentLeaveTable");
-      if (!table) return;
-
-      table.innerHTML = "";
-      const student = JSON.parse(localStorage.getItem("loggedInStudent"));
-      const requests = JSON.parse(localStorage.getItem("leaveRequests")) || [];
-
-      requests
-        .filter(r => r.user === student.id)
-        .forEach(r => {
-          const row = document.createElement("tr");
-
-          row.innerHTML = `
-            <td>${r.reason}</td>
-            <td>${r.days}</td>
-            <td>${r.startDate}</td>
-            <td>${r.endDate}</td>
-            <td>${r.assignedFaculty}</td>
-            <td class="${r.status}">${r.status}</td>
-            <td><button class="delete-btn" onclick="deleteStudentLeave(${r.id})">🗑 Delete</button></td>
-          `;
-
-          table.appendChild(row);
-        });
-    }
   </script>
 </body>
 </html>
