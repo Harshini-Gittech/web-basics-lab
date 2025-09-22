@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Dashboard</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .dashboard-container {
+      width: 80%;
+      margin: 50px auto;
+      padding: 30px;
+      background: rgba(255, 255, 255, 0.9);
+      border-radius: 16px;
+      box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+      text-align: center;
+    }
+
+    .dashboard-title {
+      font-size: 26px;
+      font-weight: bold;
+      margin-bottom: 30px;
+      color: navy;
+    }
+
+    .menu-box {
+      display: flex;
+      justify-content: center;
+      gap: 50px;
+      margin-bottom: 40px;
+    }
+
+    .menu-item {
+      width: 200px;
+      height: 200px;
+      background-color: #007bff;
+      color: white;
+      font-size: 20px;
+      font-weight: bold;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .menu-item:hover {
+      background-color: #0056b3;
+    }
+
+    .form-section {
+      display: none;
+      margin-top: 20px;
+      text-align: center;
+    }
+
+    .form-section input {
+      width: 80%;
+      padding: 10px;
+      margin: 10px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+
+    .form-section button {
+      padding: 12px 20px;
+      background: green;
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    .form-section button:hover {
+      background: darkgreen;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+    }
+
+    table, th, td {
+      border: 1px solid #ccc;
+    }
+
+    th, td {
+      padding: 10px;
+      text-align: center;
+    }
+
+    .delete-btn {
+      background-color: red;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      cursor: pointer;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="dashboard-container">
+    <div class="dashboard-title">Admin Dashboard</div>
+
+    <!-- Two Icons -->
+    <div class="menu-box">
+      <div class="menu-item" onclick="showForm('student')">➕ Add Student</div>
+      <div class="menu-item" onclick="showForm('faculty')">👨‍🏫 Add Faculty</div>
+    </div>
+
+    <!-- Add Student Form -->
+    <div id="studentForm" class="form-section">
+      <h3>Add Student</h3>
+      <input type="text" id="studentId" placeholder="Student ID" required>
+      <input type="password" id="studentPass" placeholder="Password" required>
+      <input type="text" id="studentMobile" placeholder="Mobile Number" required>
+      <button onclick="saveStudent()">Save Student</button>
+
+      <h3>Student List</h3>
+      <table id="studentTable">
+        <tr>
+          <th>Student ID</th>
+          <th>Password</th>
+          <th>Mobile</th>
+          <th>Action</th>
+        </tr>
+      </table>
+    </div>
+
+    <!-- Add Faculty Form -->
+    <div id="facultyForm" class="form-section">
+      <h3>Add Faculty</h3>
+      <input type="text" id="facultyId" placeholder="Faculty ID" required>
+      <input type="password" id="facultyPass" placeholder="Password" required>
+      <button onclick="saveFaculty()">Save Faculty</button>
+
+      <h3>Faculty List</h3>
+      <table id="facultyTable">
+        <tr>
+          <th>Faculty ID</th>
+          <th>Password</th>
+          <th>Action</th>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    // Get existing data
+    let students = JSON.parse(localStorage.getItem("students")) || [];
+    let faculty = JSON.parse(localStorage.getItem("faculty")) || [];
+
+    function showForm(type) {
+      document.getElementById("studentForm").style.display = (type === "student") ? "block" : "none";
+      document.getElementById("facultyForm").style.display = (type === "faculty") ? "block" : "none";
+    }
+
+    // Student Functions
+    function saveStudent() {
+      let id = document.getElementById("studentId").value.trim();
+      let pass = document.getElementById("studentPass").value.trim();
+      let mobile = document.getElementById("studentMobile").value.trim();
+
+      if (!id || !pass || !mobile) {
+        alert("Fill all fields!");
+        return;
+      }
+
+      students.push({ id, pass, mobile });
+      localStorage.setItem("students", JSON.stringify(students));
+
+      document.getElementById("studentId").value = "";
+      document.getElementById("studentPass").value = "";
+      document.getElementById("studentMobile").value = "";
+
+      renderStudents();
+    }
+
+    function deleteStudent(index) {
+      students.splice(index, 1);
+      localStorage.setItem("students", JSON.stringify(students));
+      renderStudents();
+    }
+
+    function renderStudents() {
+      let table = document.getElementById("studentTable");
+      table.innerHTML = `
+        <tr>
+          <th>Student ID</th>
+          <th>Password</th>
+          <th>Mobile</th>
+          <th>Action</th>
+        </tr>
+      `;
+
+      students.forEach((student, index) => {
+        let row = table.insertRow();
+        row.insertCell(0).innerText = student.id;
+        row.insertCell(1).innerText = student.pass;
+        row.insertCell(2).innerText = student.mobile;
+        row.insertCell(3).innerHTML = `<button class="delete-btn" onclick="deleteStudent(${index})">Delete</button>`;
+      });
+    }
+
+    // Faculty Functions
+    function saveFaculty() {
+      let id = document.getElementById("facultyId").value.trim();
+      let pass = document.getElementById("facultyPass").value.trim();
+
+      if (!id || !pass) {
+        alert("Fill all fields!");
+        return;
+      }
+
+      faculty.push({ id, pass });
+      localStorage.setItem("faculty", JSON.stringify(faculty));
+
+      document.getElementById("facultyId").value = "";
+      document.getElementById("facultyPass").value = "";
+
+      renderFaculty();
+    }
+
+    function deleteFaculty(index) {
+      faculty.splice(index, 1);
+      localStorage.setItem("faculty", JSON.stringify(faculty));
+      renderFaculty();
+    }
+
+    function renderFaculty() {
+      let table = document.getElementById("facultyTable");
+      table.innerHTML = `
+        <tr>
+          <th>Faculty ID</th>
+          <th>Password</th>
+          <th>Action</th>
+        </tr>
+      `;
+
+      faculty.forEach((fac, index) => {
+        let row = table.insertRow();
+        row.insertCell(0).innerText = fac.id;
+        row.insertCell(1).innerText = fac.pass;
+        row.insertCell(2).innerHTML = `<button class="delete-btn" onclick="deleteFaculty(${index})">Delete</button>`;
+      });
+    }
+
+    // Render on page load
+    renderStudents();
+    renderFaculty();
+  </script>
+
+</body>
+</html>

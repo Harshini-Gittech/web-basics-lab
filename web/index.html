@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>STULEAVE</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <h1>STULEAVE</h1>
+  </header>
+
+  <div class="login-container">
+    <!-- Orange Login Icon -->
+    <div class="login-icon">👤</div>
+
+    <h2>Login</h2>
+
+    <!-- Role Selector -->
+    <div class="input-group">
+      <label>Login as</label>
+      <select id="userType">
+        <option value="student">Student Login</option>
+        <option value="faculty">Faculty Login</option>
+        <option value="admin">Admin Login</option>
+      </select>
+    </div>
+
+    <!-- Username -->
+    <div class="input-group">
+      <label>👤 Username</label>
+      <input type="text" id="username" placeholder="Enter ID" required>
+    </div>
+
+    <!-- Password -->
+    <div class="input-group">
+      <label>🔒 Password</label>
+      <input type="password" id="password" placeholder="Enter Password" required>
+    </div>
+
+    <!-- Login Button -->
+    <button onclick="login()">Login</button>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>

@@ -1,0 +1,146 @@
+body {
+  font-family: Arial, sans-serif;
+  background-color: yellow; /* Yellow background */
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+header {
+  background: #333;
+  color: white;
+  padding: 15px;
+  width: 100%;
+  text-align: center;
+}
+
+.login-container {
+  width: 350px;
+  margin-top: 50px;
+  padding: 25px;
+  background-color: white;
+  border-radius: 12px;
+  box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.3);
+  text-align: center;
+}
+
+.login-icon {
+  width: 80px;
+  height: 80px;
+  background-color: orange;
+  border-radius: 50%;
+  margin: 0 auto 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 40px;
+  color: white;
+}
+
+.input-group {
+  text-align: left;
+  margin: 10px 0;
+}
+
+.input-group label {
+  font-size: 14px;
+  font-weight: bold;
+  margin-bottom: 5px;
+  display: block;
+}
+
+input, select {
+  width: 100%;
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #ccc;
+  margin-top: 5px;
+}
+
+button {
+  width: 100%;
+  padding: 12px;
+  margin-top: 15px;
+  border: none;
+  border-radius: 6px;
+  background-color: #007bff;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+button:hover {
+  background-color: #0056b3;
+}
+
+body {
+  background-color: yellow !important;
+  background: url("images/1.jpeg") no-repeat center center fixed;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+
+  /* ✅ Background image */
+  background: url("images/1.jpeg") no-repeat center center fixed;
+  background-size: cover;
+}
+
+/* Global text color change for all pages */
+body {
+  font-family: Arial, sans-serif;
+  background: url("images/1.jpeg") no-repeat center center fixed;
+  background-size: cover;
+  margin: 0;
+  padding: 0;
+  color: rgb(232, 81, 227); /* All text navy */
+}
+
+/* Headings navy */
+h1, h2, h3, h4, h5, h6 {
+  color: rgb(218, 51, 168);
+}
+
+/* Paragraphs, spans, labels navy */
+p, span, label {
+  color: rgb(216, 47, 205);
+}
+
+/* Links navy */
+a {
+  color: rgb(227, 61, 218);
+  text-decoration: none;
+}
+a:hover {
+  text-decoration: underline;
+}
+
+/* Input text + placeholder navy */
+input, select, textarea {
+  color: rgb(204, 72, 221);
+}
+input::placeholder, textarea::placeholder {
+  color: rgb(230, 83, 217);
+  opacity: 0.7;
+}
+
+/* Buttons keep white text */
+button {
+  background-color: #007bff;
+  color: white;
+}
+button:hover {
+  background-color: #0056b3;
+}
+
+/* ------------------ UPDATED STATUS TEXT COLORS ------------------ */
+.Pending { color: #f3b809; }    /* Yellow text */
+.Approved { color: #0bef40; }   /* Green text */
+.Rejected { color: #e7081f; }   /* Red text */
