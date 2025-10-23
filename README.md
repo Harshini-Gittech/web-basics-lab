@@ -21,3 +21,11 @@ It represents my journey through web development basics — from structure and s
 ---
 
 ## 💻 Folder Structure
+
+---
+web-basics-lab/
+│
+├── html-files/ # HTML structure and layout exercises
+├── css-files/ # Styling and animation experiments
+├── js-files/ # JavaScript interaction demos
+└── index.html # Main landing page or summary file
